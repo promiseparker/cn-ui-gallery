@@ -736,33 +736,29 @@
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
 <script>
-  // ─────────────────────────────────────────────────
-  //  Firebase init
-  // ─────────────────────────────────────────────────
   firebase.initializeApp({
     apiKey: "AIzaSyApQ-m6mYKHPyeR7DpyZJHzv-EmAE_1Oc8",
     authDomain: "cn-ui-gallery.firebaseapp.com",
-    databaseURL: "https://cn-ui-gallery-default-rtdb.firebaseio.com",
     projectId: "cn-ui-gallery",
     storageBucket: "cn-ui-gallery.firebasestorage.app",
     messagingSenderId: "923975140037",
     appId: "1:923975140037:web:56f26de3f77756a62966ac"
   });
 
-  const db      = firebase.database();
+  const db      = firebase.firestore();
   const storage = firebase.storage();
 
   // ─────────────────────────────────────────────────
   //  State
   // ─────────────────────────────────────────────────
-  let projects       = {};   // live mirror of Firebase data
+  let projects        = {};
   let activeProjectId = null;
   let activeTab       = 'desktop';
-  let galleryListener = null;
+  let unsubGallery    = null;
 
   // ─────────────────────────────────────────────────
   //  Toast
@@ -789,14 +785,14 @@
     pageGallery.classList.remove('active');
     breadcrumb.style.display = 'none';
     activeProjectId = null;
-    if (galleryListener) { galleryListener(); galleryListener = null; }
+    if (unsubGallery) { unsubGallery(); unsubGallery = null; }
   }
 
-  function showGalleryPage(projectId) {
+  function showGalleryPage(projectId, name) {
     activeProjectId = projectId;
     pageProjects.classList.remove('active');
     pageGallery.classList.add('active');
-    crumbProject.textContent = projects[projectId]?.name || '';
+    crumbProject.textContent = name || projects[projectId]?.name || '';
     breadcrumb.style.display = 'flex';
     setActiveTab('desktop');
     listenGallery();
@@ -808,15 +804,15 @@
   // ─────────────────────────────────────────────────
   //  Projects — real-time listener
   // ─────────────────────────────────────────────────
-  db.ref('projects').on('value', snap => {
-    projects = snap.val() || {};
+  db.collection('projects').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    projects = {};
+    snap.forEach(doc => { projects[doc.id] = doc.data(); });
     renderProjectsGrid();
-    // keep gallery in sync if open
     if (activeProjectId) {
-      crumbProject.textContent = projects[activeProjectId]?.name || '';
+      crumbProject.textContent = projects[activeProjectId]?.name || crumbProject.textContent;
       renderGallery();
     }
-  });
+  }, err => showToast('⚠️ Cannot load projects — fix Firebase rules.'));
 
   function renderProjectsGrid() {
     const grid = document.getElementById('projects-grid');
@@ -871,11 +867,11 @@
             ...Object.values(proj.images?.mobile  || {})
           ];
           Promise.all(allImages.map(img => storage.ref(img.path).delete().catch(() => {})))
-            .then(() => db.ref(`projects/${id}`).remove());
+            .then(() => db.collection('projects').doc(id).delete());
         }
       });
 
-      card.addEventListener('click', () => showGalleryPage(id));
+      card.addEventListener('click', () => showGalleryPage(id, proj.name));
       grid.appendChild(card);
     });
   }
@@ -903,9 +899,12 @@
   function createProject() {
     const name = projectNameInput.value.trim();
     if (!name) { projectNameInput.focus(); return; }
-    const id  = Date.now().toString();
-    db.ref(`projects/${id}`).set({ name, createdAt: Date.now(), images: { desktop: {}, mobile: {} } })
-      .then(() => { closeModal(); showGalleryPage(id); });
+    const id = Date.now().toString();
+    closeModal();
+    showGalleryPage(id, name); // navigate immediately, don't wait for Firebase
+    db.collection('projects').doc(id).set({
+      name, createdAt: Date.now(), images: { desktop: {}, mobile: {} }
+    }).catch(() => showToast('Failed to save — check Firebase rules.'));
   }
 
   // ─────────────────────────────────────────────────
@@ -918,10 +917,12 @@
   const dropZone   = document.getElementById('drop-zone');
 
   function listenGallery() {
-    if (galleryListener) { galleryListener(); }
-    const ref = db.ref(`projects/${activeProjectId}/images`);
-    const handler = ref.on('value', () => renderGallery());
-    galleryListener = () => ref.off('value', handler);
+    if (unsubGallery) { unsubGallery(); }
+    unsubGallery = db.collection('projects').doc(activeProjectId)
+      .onSnapshot(snap => {
+        if (snap.exists) { projects[activeProjectId] = snap.data(); }
+        renderGallery();
+      });
   }
 
   function setActiveTab(tab) {
@@ -986,14 +987,11 @@
       const storageRef = storage.ref(path);
 
       storageRef.put(file).then(snap => snap.ref.getDownloadURL()).then(url => {
-        db.ref(`projects/${activeProjectId}/images/${activeTab}/${imageId}`).set({
-          name: file.name,
-          url,
-          path,
-          uploadedAt: Date.now()
+        db.collection('projects').doc(activeProjectId).update({
+          [`images.${activeTab}.${imageId}`]: { name: file.name, url, path, uploadedAt: Date.now() }
         });
         showToast('Upload complete ✓');
-      }).catch(() => showToast('Upload failed. Try again.'));
+      }).catch(() => showToast('Upload failed — check Firebase Storage rules.'));
     });
   }
 
@@ -1027,7 +1025,9 @@
       card.querySelector('.img-delete').addEventListener('click', e => {
         e.stopPropagation();
         storage.ref(item.path).delete().catch(() => {});
-        db.ref(`projects/${activeProjectId}/images/${activeTab}/${imageId}`).remove();
+        db.collection('projects').doc(activeProjectId).update({
+          [`images.${activeTab}.${imageId}`]: firebase.firestore.FieldValue.delete()
+        });
       });
 
       imgGrid.appendChild(card);
