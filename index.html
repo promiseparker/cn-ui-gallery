@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --surface2: #e8e8ed;
+      --border: #ebebeb;
+      --accent: #9CC948;
+      --accent-dim: #7da832;
+      --accent-text: #fff;
+      --text: #1a1a2e;
+      --text-muted: #6e6e80;
+      --red: #e05252;
+      --red-bg: rgba(224,82,82,0.08);
+      --radius: 12px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --gutter: 32px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 var(--gutter);
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand-logo { height: 38px; width: auto; display: block; cursor: pointer; }
+
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .breadcrumb .sep { opacity: 0.4; }
+    .breadcrumb .crumb-link { cursor: pointer; color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+    .breadcrumb .crumb-link:hover { color: var(--accent-dim); }
+    .breadcrumb .crumb-current { color: var(--text); font-weight: 600; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      font-family: 'Geist', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-dim); }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+    .btn-sm { padding: 8px 16px; font-size: 13px; }
+
+    /* ── Page sections ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ════════════════════════════
+       PROJECTS PAGE
+    ════════════════════════════ */
+    .projects-page { padding: 32px var(--gutter) 80px; }
+
+    .projects-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .projects-header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; }
+    .projects-header p { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    /* New project card */
+    .new-project-card {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: var(--text-muted);
+      background: transparent;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .new-project-card:hover { border-color: var(--accent); background: rgba(156,201,72,0.04); color: var(--accent-dim); }
+    .new-project-card .plus-icon { font-size: 32px; line-height: 1; }
+
+    /* Project card */
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      position: relative;
+    }
+
+    .project-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.12); border-color: var(--accent); }
+
+    .project-card-thumb {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--surface2);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .project-card-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s;
+    }
+
+    .project-card:hover .project-card-thumb img { transform: scale(1.04); }
+
+    .project-card-thumb .thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      color: var(--border);
+    }
+
+    .project-card-thumb .thumb-count {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 100px;
+      backdrop-filter: blur(4px);
+    }
+
+    .project-card-body { padding: 14px 16px; }
+
+    .project-card-name {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .project-card-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+    }
+
+    .project-card-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .project-card:hover .project-card-actions { opacity: 1; }
+
+    .icon-btn {
+      background: rgba(255,255,255,0.92);
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color 0.15s, background 0.15s;
+      backdrop-filter: blur(4px);
+    }
+
+    .icon-btn:hover { color: var(--red); background: var(--red-bg); }
+
+    /* ════════════════════════════
+       GALLERY PAGE
+    ════════════════════════════ */
+    .gallery-page { padding: 32px var(--gutter) 80px; }
+
+    .gallery-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 4px;
+      gap: 2px;
+    }
+
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 20px;
+      border: none;
+      border-radius: 100px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+    }
+
+    .tab-btn.active { background: var(--accent); color: #fff; }
+
+    .count { font-size: 13px; color: var(--text-muted); }
+    .count strong { color: var(--text); }
+
+    /* Drop zone */
+    .drop-zone {
+      display: none;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 32px;
+      text-align: center;
+      margin-bottom: 24px;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+
+    .drop-zone.visible { display: block; }
+    .drop-zone.drag-over { border-color: var(--accent); background: rgba(156,201,72,0.05); }
+    .drop-zone p { color: var(--text-muted); font-size: 14px; margin-top: 8px; }
+    .drop-zone p strong { color: var(--text); }
+    .drop-icon { font-size: 32px; }
+
+    /* Image grid */
+    .img-grid { display: grid; gap: 16px; }
+    .img-grid.desktop { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+    .img-grid.mobile  { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+
+    .img-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      box-shadow: var(--shadow);
+    }
+
+    .img-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.12); border-color: var(--accent); }
+
+    .img-card-wrap { width: 100%; overflow: hidden; background: var(--surface2); }
+    .img-grid.desktop .img-card-wrap { aspect-ratio: 16/10; }
+    .img-grid.mobile  .img-card-wrap { aspect-ratio: 9/19; }
+
+    .img-card-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+    .img-card:hover .img-card-wrap img { transform: scale(1.03); }
+
+    .img-card-footer {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .img-card-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+
+    .img-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .img-delete:hover { color: var(--red); background: var(--red-bg); }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 72px 24px; color: var(--text-muted); display: none; }
+    .empty.visible { display: block; }
+    .empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .empty h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+    .empty p { font-size: 14px; }
+
+    /* ════════════════════════════
+       MODAL
+    ════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    }
+
+    .modal h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
+    .modal p  { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+
+    .form-group input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Geist', sans-serif;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .form-group input:focus { border-color: var(--accent); }
+
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 28px; }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(6px);
+    }
+
+    .lightbox.open { display: flex; }
+
+    .lightbox-inner {
+      position: relative;
+      max-width: 92vw;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lightbox-inner img {
+      max-width: 100%;
+      max-height: 84vh;
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+      object-fit: contain;
+    }
+
+    .lightbox-name { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+    .lightbox-close {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+
+    #file-input { display: none; }
+
+    .upload-wrap { position: relative; }
+
+    .upload-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      overflow: hidden;
+      z-index: 20;
+      min-width: 148px;
+    }
+
+    .upload-dropdown.open { display: block; }
+
+    .upload-option {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 11px 16px;
+      background: none;
+      border: none;
+      font-family: 'Geist', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s;
+      text-align: left;
+    }
+
+    .upload-option:hover { background: var(--surface2); }
+
+    footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg);
+      z-index: 5;
+    }
+
+    /* ════════════════════════════
+       RESPONSIVE
+    ════════════════════════════ */
+
+    /* Tablet */
+    @media (max-width: 768px) {
+      :root { --gutter: 24px; }
+
+      header { height: 56px; }
+      .brand-logo { height: 32px; }
+
+      .projects-header { margin-bottom: 24px; }
+      .projects-header h1 { font-size: 20px; }
+      .projects-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+
+      .gallery-toolbar { gap: 12px; margin-bottom: 24px; }
+      .tab-btn { padding: 7px 16px; font-size: 13px; }
+
+      .img-grid.desktop { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+      .img-grid.mobile  { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    }
+
+    /* Mobile */
+    @media (max-width: 480px) {
+      :root { --gutter: 16px; }
+
+      header { height: 52px; }
+      .brand-logo { height: 28px; }
+
+      .breadcrumb { font-size: 13px; gap: 5px; }
+      .breadcrumb .crumb-current {
+        max-width: 130px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Stack projects header vertically */
+      .projects-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .projects-header .btn { width: 100%; justify-content: center; }
+
+      /* Single column project cards */
+      .projects-grid { grid-template-columns: 1fr; gap: 14px; }
+
+      /* Always show delete on mobile (no hover) */
+      .project-card-actions { opacity: 1; }
+
+      /* New project card compact row */
+      .new-project-card { min-height: 88px; flex-direction: row; gap: 10px; padding: 0 20px; }
+      .new-project-card .plus-icon { font-size: 22px; }
+
+      /* Gallery toolbar: stack tabs on top, count+upload below */
+      .gallery-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .tabs { justify-content: center; }
+      .tab-btn { flex: 1; justify-content: center; padding: 9px 12px; }
+
+      .gallery-toolbar > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      /* Upload button — natural width, no stretch */
+      #upload-trigger { flex: none; }
+
+      /* Desktop screens: 1 column on small phones */
+      .img-grid.desktop { grid-template-columns: 1fr; }
+
+      /* Mobile screens: 2 columns */
+      .img-grid.mobile  { grid-template-columns: repeat(2, 1fr); }
+
+      /* Drop zone compact */
+      .drop-zone { padding: 28px 16px; }
+
+      /* Modal slides up from bottom */
+      .modal { border-radius: 16px 16px 0 0; padding: 24px var(--gutter) 32px; }
+      .modal-overlay { align-items: flex-end; padding: 0; }
+      .modal-actions { flex-direction: column-reverse; gap: 8px; }
+      .modal-actions .btn { width: 100%; justify-content: center; }
+
+      /* Lightbox bigger tap target */
+      .lightbox-close { width: 44px; height: 44px; top: 16px; right: 16px; }
+
+      footer { font-size: 12px; padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <img src="cnlogo2.png" alt="Connect Nigeria" class="brand-logo" id="logo-home" />
+  <div class="header-right">
+    <nav class="breadcrumb" id="breadcrumb" style="display:none">
+      <span class="crumb-link" id="crumb-home">Projects</span>
+      <span class="sep">›</span>
+      <span class="crumb-current" id="crumb-project"></span>
+    </nav>
+  </div>
+</header>
+
+<!-- ══════════════════════════════
+     PAGE: PROJECTS
+══════════════════════════════ -->
+<div class="page active projects-page" id="page-projects">
+  <div class="projects-header">
+    <div>
+      <h1>Projects</h1>
+      <p>Select a project to review its UI screens.</p>
+    </div>
+    <button class="btn btn-primary" id="new-project-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Project
+    </button>
+  </div>
+  <div class="projects-grid" id="projects-grid"></div>
+</div>
+
+<!-- ══════════════════════════════
+     PAGE: GALLERY
+══════════════════════════════ -->
+<div class="page gallery-page" id="page-gallery">
+  <div class="gallery-toolbar">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="desktop">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Desktop
+      </button>
+      <button class="tab-btn" data-tab="mobile">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>
+        Mobile
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <p class="count">Showing <strong id="count-label">0</strong> screens</p>
+      <div class="upload-wrap">
+        <button class="btn btn-primary btn-sm" id="upload-trigger">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="upload-dropdown" id="upload-dropdown">
+          <button class="upload-option" data-type="desktop">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Desktop
+          </button>
+          <button class="upload-option" data-type="mobile">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg>
+            Mobile
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-icon">🖼️</div>
+    <p><strong>Drop images here</strong> or click Upload above</p>
+    <p style="margin-top:4px">PNG, JPG, WebP, GIF supported</p>
+  </div>
+
+  <div class="img-grid desktop" id="img-grid"></div>
+  <div class="empty" id="empty-state">
+    <div class="empty-icon">📂</div>
+    <h3>No screens yet</h3>
+    <p>Upload some UI images to get started.</p>
+  </div>
+</div>
+
+<!-- ── New Project Modal ── -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2>New Project</h2>
+    <p>Give your project a name to get started.</p>
+    <div class="form-group">
+      <label for="project-name-input">Project Name</label>
+      <input type="text" id="project-name-input" placeholder="e.g. Dashboard Redesign" maxlength="60" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-create">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Lightbox ── -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightbox-close">✕</button>
+  <div class="lightbox-inner">
+    <img id="lightbox-img" src="" alt="" />
+    <span class="lightbox-name" id="lightbox-name"></span>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept="image/*" multiple />
+
+<footer>
+  <span>Built with love ❤️ by Olaifa Promise</span>
+</footer>
+
+<script>
+  // ─────────────────────────────────────────────────
+  //  State & persistence
+  // ─────────────────────────────────────────────────
+  function loadProjects() {
+    try { return JSON.parse(localStorage.getItem('cn_projects') || '[]'); } catch { return []; }
+  }
+
+  function saveProjects(projects) {
+    try { localStorage.setItem('cn_projects', JSON.stringify(projects)); } catch (e) { /* quota exceeded — images still live in memory */ }
+  }
+
+  let projects = loadProjects();
+  let activeProjectId = null;
+  let activeTab = 'desktop';
+
+  // ─────────────────────────────────────────────────
+  //  Navigation
+  // ─────────────────────────────────────────────────
+  const pageProjects = document.getElementById('page-projects');
+  const pageGallery  = document.getElementById('page-gallery');
+  const breadcrumb   = document.getElementById('breadcrumb');
+  const crumbProject = document.getElementById('crumb-project');
+
+  function showProjectsPage() {
+    pageProjects.classList.add('active');
+    pageGallery.classList.remove('active');
+    breadcrumb.style.display = 'none';
+    activeProjectId = null;
+    renderProjectsGrid();
+  }
+
+  function showGalleryPage(projectId) {
+    activeProjectId = projectId;
+    pageProjects.classList.remove('active');
+    pageGallery.classList.add('active');
+    const proj = projects.find(p => p.id === projectId);
+    crumbProject.textContent = proj ? proj.name : '';
+    breadcrumb.style.display = 'flex';
+    setActiveTab('desktop');
+  }
+
+  document.getElementById('logo-home').addEventListener('click', showProjectsPage);
+  document.getElementById('crumb-home').addEventListener('click', showProjectsPage);
+
+  // ─────────────────────────────────────────────────
+  //  Projects grid
+  // ─────────────────────────────────────────────────
+  function renderProjectsGrid() {
+    const grid = document.getElementById('projects-grid');
+    grid.innerHTML = '';
+
+    // New project card
+    const newCard = document.createElement('div');
+    newCard.className = 'new-project-card';
+    newCard.innerHTML = `<div class="plus-icon">+</div><span>New Project</span>`;
+    newCard.addEventListener('click', openModal);
+    grid.appendChild(newCard);
+
+    projects.forEach(proj => {
+      const totalImages = (proj.images.desktop.length + proj.images.mobile.length);
+      const thumb = proj.images.desktop[0] || proj.images.mobile[0];
+
+      const card = document.createElement('div');
+      card.className = 'project-card';
+      card.innerHTML = `
+        <div class="project-card-thumb">
+          ${thumb
+            ? `<img src="${thumb.src}" alt="${proj.name}" loading="lazy" />`
+            : `<div class="thumb-placeholder">🖼️</div>`
+          }
+          ${totalImages > 0 ? `<span class="thumb-count">${totalImages} screen${totalImages !== 1 ? 's' : ''}</span>` : ''}
+        </div>
+        <div class="project-card-body">
+          <div class="project-card-name">${proj.name}</div>
+          <div class="project-card-meta">
+            <span>${proj.images.desktop.length} desktop</span>
+            <span>${proj.images.mobile.length} mobile</span>
+          </div>
+        </div>
+        <div class="project-card-actions">
+          <button class="icon-btn delete-proj-btn" title="Delete project">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      `;
+
+      card.querySelector('.delete-proj-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        if (confirm(`Delete "${proj.name}"? This cannot be undone.`)) {
+          projects = projects.filter(p => p.id !== proj.id);
+          saveProjects(projects);
+          renderProjectsGrid();
+        }
+      });
+
+      card.addEventListener('click', () => showGalleryPage(proj.id));
+      grid.appendChild(card);
+    });
+  }
+
+  // ─────────────────────────────────────────────────
+  //  Modal — create project
+  // ─────────────────────────────────────────────────
+  const modalOverlay = document.getElementById('modal-overlay');
+  const projectNameInput = document.getElementById('project-name-input');
+
+  function openModal() {
+    projectNameInput.value = '';
+    modalOverlay.classList.add('open');
+    setTimeout(() => projectNameInput.focus(), 50);
+  }
+
+  function closeModal() { modalOverlay.classList.remove('open'); }
+
+  document.getElementById('new-project-btn').addEventListener('click', openModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+
+  document.getElementById('modal-create').addEventListener('click', createProject);
+  projectNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') createProject(); });
+
+  function createProject() {
+    const name = projectNameInput.value.trim();
+    if (!name) { projectNameInput.focus(); return; }
+    const proj = { id: Date.now().toString(), name, images: { desktop: [], mobile: [] } };
+    projects.unshift(proj);
+    saveProjects(projects);
+    closeModal();
+    showGalleryPage(proj.id);
+  }
+
+  // ─────────────────────────────────────────────────
+  //  Gallery
+  // ─────────────────────────────────────────────────
+  const imgGrid    = document.getElementById('img-grid');
+  const emptyState = document.getElementById('empty-state');
+  const countLabel = document.getElementById('count-label');
+  const fileInput  = document.getElementById('file-input');
+  const dropZone   = document.getElementById('drop-zone');
+
+  function setActiveTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    imgGrid.className = `img-grid ${tab}`;
+    renderGallery();
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+  });
+
+  // Upload dropdown
+  const uploadDropdown = document.getElementById('upload-dropdown');
+
+  document.getElementById('upload-trigger').addEventListener('click', e => {
+    e.stopPropagation();
+    uploadDropdown.classList.toggle('open');
+  });
+
+  document.querySelectorAll('.upload-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      setActiveTab(opt.dataset.type);
+      uploadDropdown.classList.remove('open');
+      fileInput.click();
+    });
+  });
+
+  document.addEventListener('click', () => uploadDropdown.classList.remove('open'));
+
+  fileInput.addEventListener('change', e => {
+    handleFiles([...e.target.files]);
+    fileInput.value = '';
+  });
+
+  // Drag & drop
+  document.addEventListener('dragover', e => {
+    if (activeProjectId) { e.preventDefault(); dropZone.classList.add('visible', 'drag-over'); }
+  });
+  document.addEventListener('dragleave', e => {
+    if (!e.relatedTarget) dropZone.classList.remove('drag-over', 'visible');
+  });
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over', 'visible');
+    if (!activeProjectId) return;
+    const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+    if (files.length) handleFiles(files);
+  });
+
+  function handleFiles(files) {
+    const proj = projects.find(p => p.id === activeProjectId);
+    if (!proj) return;
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (!imageFiles.length) return;
+    let loaded = 0;
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        proj.images[activeTab].push({ name: file.name, src: e.target.result });
+        loaded++;
+        if (loaded === imageFiles.length) {
+          saveProjects(projects);
+          renderGallery();
+          renderProjectsGrid();
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderGallery() {
+    const proj = projects.find(p => p.id === activeProjectId);
+    const items = proj ? proj.images[activeTab] : [];
+    countLabel.textContent = items.length;
+    emptyState.classList.toggle('visible', items.length === 0);
+    imgGrid.innerHTML = '';
+
+    items.forEach((item, i) => {
+      const card = document.createElement('div');
+      card.className = 'img-card';
+      card.innerHTML = `
+        <div class="img-card-wrap">
+          <img src="${item.src}" alt="${item.name}" loading="lazy" />
+        </div>
+        <div class="img-card-footer">
+          <span class="img-card-name" title="${item.name}">${item.name}</span>
+          <button class="img-delete" title="Remove" data-index="${i}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      card.querySelector('img').addEventListener('click', () => openLightbox(item));
+      card.querySelector('.img-delete').addEventListener('click', e => {
+        e.stopPropagation();
+        const proj = projects.find(p => p.id === activeProjectId);
+        proj.images[activeTab].splice(i, 1);
+        saveProjects(projects);
+        renderGallery();
+        renderProjectsGrid();
+      });
+
+      imgGrid.appendChild(card);
+    });
+  }
+
+  // ─────────────────────────────────────────────────
+  //  Lightbox
+  // ─────────────────────────────────────────────────
+  const lightbox     = document.getElementById('lightbox');
+  const lightboxImg  = document.getElementById('lightbox-img');
+  const lightboxName = document.getElementById('lightbox-name');
+
+  function openLightbox(item) {
+    lightboxImg.src = item.src;
+    lightboxName.textContent = item.name;
+    lightbox.classList.add('open');
+  }
+
+  document.getElementById('lightbox-close').addEventListener('click', () => lightbox.classList.remove('open'));
+  lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.classList.remove('open'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') lightbox.classList.remove('open'); });
+
+  // ─────────────────────────────────────────────────
+  //  Init
+  // ─────────────────────────────────────────────────
+  renderProjectsGrid();
+</script>
+</body>
+</html>
