@@ -722,25 +722,59 @@
 
 <input type="file" id="file-input" accept="image/*" multiple />
 
+<!-- Upload progress toast -->
+<div id="toast" style="
+  display:none;position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
+  background:#1a1a2e;color:#fff;padding:10px 20px;border-radius:100px;
+  font-size:13px;font-family:'Geist',sans-serif;z-index:200;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,0.2);
+"></div>
+
 <footer>
   <span>Built with love ❤️ by Olaifa Promise</span>
 </footer>
 
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
 <script>
   // ─────────────────────────────────────────────────
-  //  State & persistence
+  //  Firebase init
   // ─────────────────────────────────────────────────
-  function loadProjects() {
-    try { return JSON.parse(localStorage.getItem('cn_projects') || '[]'); } catch { return []; }
-  }
+  firebase.initializeApp({
+    apiKey: "AIzaSyApQ-m6mYKHPyeR7DpyZJHzv-EmAE_1Oc8",
+    authDomain: "cn-ui-gallery.firebaseapp.com",
+    databaseURL: "https://cn-ui-gallery-default-rtdb.firebaseio.com",
+    projectId: "cn-ui-gallery",
+    storageBucket: "cn-ui-gallery.firebasestorage.app",
+    messagingSenderId: "923975140037",
+    appId: "1:923975140037:web:56f26de3f77756a62966ac"
+  });
 
-  function saveProjects(projects) {
-    try { localStorage.setItem('cn_projects', JSON.stringify(projects)); } catch (e) { /* quota exceeded — images still live in memory */ }
-  }
+  const db      = firebase.database();
+  const storage = firebase.storage();
 
-  let projects = loadProjects();
+  // ─────────────────────────────────────────────────
+  //  State
+  // ─────────────────────────────────────────────────
+  let projects       = {};   // live mirror of Firebase data
   let activeProjectId = null;
-  let activeTab = 'desktop';
+  let activeTab       = 'desktop';
+  let galleryListener = null;
+
+  // ─────────────────────────────────────────────────
+  //  Toast
+  // ─────────────────────────────────────────────────
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.style.display = 'none', 3000);
+  }
 
   // ─────────────────────────────────────────────────
   //  Navigation
@@ -755,25 +789,35 @@
     pageGallery.classList.remove('active');
     breadcrumb.style.display = 'none';
     activeProjectId = null;
-    renderProjectsGrid();
+    if (galleryListener) { galleryListener(); galleryListener = null; }
   }
 
   function showGalleryPage(projectId) {
     activeProjectId = projectId;
     pageProjects.classList.remove('active');
     pageGallery.classList.add('active');
-    const proj = projects.find(p => p.id === projectId);
-    crumbProject.textContent = proj ? proj.name : '';
+    crumbProject.textContent = projects[projectId]?.name || '';
     breadcrumb.style.display = 'flex';
     setActiveTab('desktop');
+    listenGallery();
   }
 
   document.getElementById('logo-home').addEventListener('click', showProjectsPage);
   document.getElementById('crumb-home').addEventListener('click', showProjectsPage);
 
   // ─────────────────────────────────────────────────
-  //  Projects grid
+  //  Projects — real-time listener
   // ─────────────────────────────────────────────────
+  db.ref('projects').on('value', snap => {
+    projects = snap.val() || {};
+    renderProjectsGrid();
+    // keep gallery in sync if open
+    if (activeProjectId) {
+      crumbProject.textContent = projects[activeProjectId]?.name || '';
+      renderGallery();
+    }
+  });
+
   function renderProjectsGrid() {
     const grid = document.getElementById('projects-grid');
     grid.innerHTML = '';
@@ -785,16 +829,21 @@
     newCard.addEventListener('click', openModal);
     grid.appendChild(newCard);
 
-    projects.forEach(proj => {
-      const totalImages = (proj.images.desktop.length + proj.images.mobile.length);
-      const thumb = proj.images.desktop[0] || proj.images.mobile[0];
+    // Sort by createdAt descending
+    const sorted = Object.entries(projects).sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+
+    sorted.forEach(([id, proj]) => {
+      const desktopImages = proj.images?.desktop ? Object.values(proj.images.desktop) : [];
+      const mobileImages  = proj.images?.mobile  ? Object.values(proj.images.mobile)  : [];
+      const totalImages   = desktopImages.length + mobileImages.length;
+      const thumb         = desktopImages[0] || mobileImages[0];
 
       const card = document.createElement('div');
       card.className = 'project-card';
       card.innerHTML = `
         <div class="project-card-thumb">
           ${thumb
-            ? `<img src="${thumb.src}" alt="${proj.name}" loading="lazy" />`
+            ? `<img src="${thumb.url}" alt="${proj.name}" loading="lazy" />`
             : `<div class="thumb-placeholder">🖼️</div>`
           }
           ${totalImages > 0 ? `<span class="thumb-count">${totalImages} screen${totalImages !== 1 ? 's' : ''}</span>` : ''}
@@ -802,8 +851,8 @@
         <div class="project-card-body">
           <div class="project-card-name">${proj.name}</div>
           <div class="project-card-meta">
-            <span>${proj.images.desktop.length} desktop</span>
-            <span>${proj.images.mobile.length} mobile</span>
+            <span>${desktopImages.length} desktop</span>
+            <span>${mobileImages.length} mobile</span>
           </div>
         </div>
         <div class="project-card-actions">
@@ -816,13 +865,17 @@
       card.querySelector('.delete-proj-btn').addEventListener('click', e => {
         e.stopPropagation();
         if (confirm(`Delete "${proj.name}"? This cannot be undone.`)) {
-          projects = projects.filter(p => p.id !== proj.id);
-          saveProjects(projects);
-          renderProjectsGrid();
+          // Delete all images from Storage then remove DB entry
+          const allImages = [
+            ...Object.values(proj.images?.desktop || {}),
+            ...Object.values(proj.images?.mobile  || {})
+          ];
+          Promise.all(allImages.map(img => storage.ref(img.path).delete().catch(() => {})))
+            .then(() => db.ref(`projects/${id}`).remove());
         }
       });
 
-      card.addEventListener('click', () => showGalleryPage(proj.id));
+      card.addEventListener('click', () => showGalleryPage(id));
       grid.appendChild(card);
     });
   }
@@ -830,7 +883,7 @@
   // ─────────────────────────────────────────────────
   //  Modal — create project
   // ─────────────────────────────────────────────────
-  const modalOverlay = document.getElementById('modal-overlay');
+  const modalOverlay     = document.getElementById('modal-overlay');
   const projectNameInput = document.getElementById('project-name-input');
 
   function openModal() {
@@ -844,28 +897,32 @@
   document.getElementById('new-project-btn').addEventListener('click', openModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
-
   document.getElementById('modal-create').addEventListener('click', createProject);
   projectNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') createProject(); });
 
   function createProject() {
     const name = projectNameInput.value.trim();
     if (!name) { projectNameInput.focus(); return; }
-    const proj = { id: Date.now().toString(), name, images: { desktop: [], mobile: [] } };
-    projects.unshift(proj);
-    saveProjects(projects);
-    closeModal();
-    showGalleryPage(proj.id);
+    const id  = Date.now().toString();
+    db.ref(`projects/${id}`).set({ name, createdAt: Date.now(), images: { desktop: {}, mobile: {} } })
+      .then(() => { closeModal(); showGalleryPage(id); });
   }
 
   // ─────────────────────────────────────────────────
-  //  Gallery
+  //  Gallery — real-time listener
   // ─────────────────────────────────────────────────
   const imgGrid    = document.getElementById('img-grid');
   const emptyState = document.getElementById('empty-state');
   const countLabel = document.getElementById('count-label');
   const fileInput  = document.getElementById('file-input');
   const dropZone   = document.getElementById('drop-zone');
+
+  function listenGallery() {
+    if (galleryListener) { galleryListener(); }
+    const ref = db.ref(`projects/${activeProjectId}/images`);
+    const handler = ref.on('value', () => renderGallery());
+    galleryListener = () => ref.off('value', handler);
+  }
 
   function setActiveTab(tab) {
     activeTab = tab;
@@ -917,43 +974,48 @@
   });
 
   function handleFiles(files) {
-    const proj = projects.find(p => p.id === activeProjectId);
-    if (!proj) return;
+    if (!activeProjectId) return;
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     if (!imageFiles.length) return;
-    let loaded = 0;
+
+    showToast(`Uploading ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}…`);
+
     imageFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        proj.images[activeTab].push({ name: file.name, src: e.target.result });
-        loaded++;
-        if (loaded === imageFiles.length) {
-          saveProjects(projects);
-          renderGallery();
-          renderProjectsGrid();
-        }
-      };
-      reader.readAsDataURL(file);
+      const imageId   = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const path      = `${activeProjectId}/${activeTab}/${imageId}_${file.name}`;
+      const storageRef = storage.ref(path);
+
+      storageRef.put(file).then(snap => snap.ref.getDownloadURL()).then(url => {
+        db.ref(`projects/${activeProjectId}/images/${activeTab}/${imageId}`).set({
+          name: file.name,
+          url,
+          path,
+          uploadedAt: Date.now()
+        });
+        showToast('Upload complete ✓');
+      }).catch(() => showToast('Upload failed. Try again.'));
     });
   }
 
   function renderGallery() {
-    const proj = projects.find(p => p.id === activeProjectId);
-    const items = proj ? proj.images[activeTab] : [];
+    const proj  = projects[activeProjectId];
+    const items = proj?.images?.[activeTab] ? Object.entries(proj.images[activeTab]) : [];
+    items.sort((a, b) => (a[1].uploadedAt || 0) - (b[1].uploadedAt || 0));
+
     countLabel.textContent = items.length;
     emptyState.classList.toggle('visible', items.length === 0);
     imgGrid.innerHTML = '';
 
-    items.forEach((item, i) => {
+    items.forEach(([imageId, item]) => {
       const card = document.createElement('div');
       card.className = 'img-card';
       card.innerHTML = `
         <div class="img-card-wrap">
-          <img src="${item.src}" alt="${item.name}" loading="lazy" />
+          <img src="${item.url}" alt="${item.name}" loading="lazy" />
         </div>
         <div class="img-card-footer">
           <span class="img-card-name" title="${item.name}">${item.name}</span>
-          <button class="img-delete" title="Remove" data-index="${i}">
+          <button class="img-delete" title="Remove">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
             </svg>
@@ -964,11 +1026,8 @@
       card.querySelector('img').addEventListener('click', () => openLightbox(item));
       card.querySelector('.img-delete').addEventListener('click', e => {
         e.stopPropagation();
-        const proj = projects.find(p => p.id === activeProjectId);
-        proj.images[activeTab].splice(i, 1);
-        saveProjects(projects);
-        renderGallery();
-        renderProjectsGrid();
+        storage.ref(item.path).delete().catch(() => {});
+        db.ref(`projects/${activeProjectId}/images/${activeTab}/${imageId}`).remove();
       });
 
       imgGrid.appendChild(card);
@@ -983,7 +1042,7 @@
   const lightboxName = document.getElementById('lightbox-name');
 
   function openLightbox(item) {
-    lightboxImg.src = item.src;
+    lightboxImg.src = item.url;
     lightboxName.textContent = item.name;
     lightbox.classList.add('open');
   }
@@ -991,11 +1050,6 @@
   document.getElementById('lightbox-close').addEventListener('click', () => lightbox.classList.remove('open'));
   lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.classList.remove('open'); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') lightbox.classList.remove('open'); });
-
-  // ─────────────────────────────────────────────────
-  //  Init
-  // ─────────────────────────────────────────────────
-  renderProjectsGrid();
 </script>
 </body>
 </html>
