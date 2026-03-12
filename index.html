@@ -737,7 +737,6 @@
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
 <script>
   firebase.initializeApp({
@@ -749,8 +748,22 @@
     appId: "1:923975140037:web:56f26de3f77756a62966ac"
   });
 
-  const db      = firebase.firestore();
-  const storage = firebase.storage();
+  const db = firebase.firestore();
+
+  const CLOUDINARY_CLOUD  = 'dkb1dzfqh';
+  const CLOUDINARY_PRESET = 'cn-ui-upload';
+
+  function uploadToCloudinary(file) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', CLOUDINARY_PRESET);
+    return fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+      method: 'POST', body: form
+    }).then(r => r.json()).then(data => {
+      if (data.error) throw new Error(data.error.message);
+      return data.secure_url;
+    });
+  }
 
   // ─────────────────────────────────────────────────
   //  State
@@ -866,8 +879,7 @@
             ...Object.values(proj.images?.desktop || {}),
             ...Object.values(proj.images?.mobile  || {})
           ];
-          Promise.all(allImages.map(img => storage.ref(img.path).delete().catch(() => {})))
-            .then(() => db.collection('projects').doc(id).delete());
+          db.collection('projects').doc(id).delete();
         }
       });
 
@@ -982,16 +994,16 @@
     showToast(`Uploading ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}…`);
 
     imageFiles.forEach(file => {
-      const imageId   = Date.now().toString(36) + Math.random().toString(36).slice(2);
-      const path      = `${activeProjectId}/${activeTab}/${imageId}_${file.name}`;
-      const storageRef = storage.ref(path);
+      const imageId = Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-      storageRef.put(file).then(snap => snap.ref.getDownloadURL()).then(url => {
-        db.collection('projects').doc(activeProjectId).update({
-          [`images.${activeTab}.${imageId}`]: { name: file.name, url, path, uploadedAt: Date.now() }
-        });
-        showToast('Upload complete ✓');
-      }).catch(() => showToast('Upload failed — check Firebase Storage rules.'));
+      uploadToCloudinary(file)
+        .then(url => {
+          db.collection('projects').doc(activeProjectId).update({
+            [`images.${activeTab}.${imageId}`]: { name: file.name, url, uploadedAt: Date.now() }
+          });
+          showToast('Upload complete ✓');
+        })
+        .catch(err => showToast('Upload failed. Try again.'));
     });
   }
 
@@ -1024,7 +1036,6 @@
       card.querySelector('img').addEventListener('click', () => openLightbox(item));
       card.querySelector('.img-delete').addEventListener('click', e => {
         e.stopPropagation();
-        storage.ref(item.path).delete().catch(() => {});
         db.collection('projects').doc(activeProjectId).update({
           [`images.${activeTab}.${imageId}`]: firebase.firestore.FieldValue.delete()
         });
